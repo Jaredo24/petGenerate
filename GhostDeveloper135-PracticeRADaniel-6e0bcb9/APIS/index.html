@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Amor</title>
+    <!-- Carga de Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Carga de la fuente Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        /* Estilo para la fuente Inter */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Estilo para el indicador de carga (spinner) */
+        .loader {
+            border: 4px solid #f3f3f3; /* gris claro */
+            border-top: 4px solid #ec4899; /* rosa */
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen flex items-center justify-center p-4">
+
+    <div class="bg-gray-800 p-8 rounded-2xl shadow-2xl w-full max-w-md">
+        
+        <!-- Título -->
+        <h1 class="text-3xl font-bold text-center text-pink-400 mb-2">Calculadora de Amor</h1>
+        <p class="text-gray-400 text-center mb-6">Ingresa dos nombres para ver su compatibilidad.</p>
+
+        <!-- Formulario de Entradas -->
+        <div class="space-y-4">
+            <div>
+                <label for="name1" class="block text-sm font-medium text-gray-300 mb-1">Tu Nombre</label>
+                <input type="text" id="name1" placeholder="Ej: Ana" class="w-full p-3 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-pink-500 transition">
+            </div>
+            <div>
+                <label for="name2" class="block text-sm font-medium text-gray-300 mb-1">Nombre de tu Pareja</label>
+                <input type="text" id="name2" placeholder="Ej: Luis" class="w-full p-3 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-pink-500 transition">
+            </div>
+            
+            <!-- Botón de Calcular -->
+            <button id="calculateBtn" class="w-full p-3 bg-pink-600 text-white font-bold rounded-lg hover:bg-pink-700 transition-colors duration-300 shadow-lg">
+                Calcular Compatibilidad
+            </button>
+        </div>
+
+        <!-- Indicador de Carga -->
+        <div id="loader" class="loader mx-auto my-8 hidden"></div>
+
+        <!-- Área de Resultados -->
+        <div id="result-container" class="text-center mt-8 p-6 bg-gray-700 rounded-lg hidden">
+            <!-- El contenido del resultado se insertará aquí -->
+        </div>
+
+        <!-- Mensaje de Error -->
+        <div id="error-message" class="text-red-400 text-center mt-4 hidden"></div>
+
+    </div>
+
+    <script>
+        // --- Referencias a elementos del DOM ---
+        const name1Input = document.getElementById('name1');
+        const name2Input = document.getElementById('name2');
+        const calculateBtn = document.getElementById('calculateBtn');
+        const resultContainer = document.getElementById('result-container');
+        const loader = document.getElementById('loader');
+        const errorMessage = document.getElementById('error-message');
+
+        // --- ¡IMPORTANTE! Esta es tu NUEVA clave de API ---
+        // Clave API de tu app "TestApi"
+        const apiKey = 'd59bf6349cfafbca4f2bc3ed5844f1faeefaeec8fb2f4f787e6';
+        // ----------------------------------------------------
+
+        // --- Event Listener para el botón ---
+        calculateBtn.addEventListener('click', calculateLove);
+
+        /**
+         * Función principal para calcular el amor.
+         */
+        async function calculateLove() {
+            const name1 = name1Input.value.trim();
+            const name2 = name2Input.value.trim();
+
+            // --- Validación ---
+            if (!name1 || !name2) {
+                showError('Por favor, ingresa ambos nombres.');
+                return;
+            }
+            if (!apiKey || apiKey.includes('TU_API_KEY')) {
+                showError('Error: La clave de API no está configurada.');
+                return;
+            }
+
+            // --- Actualizar UI (Estado de carga) ---
+            hideError();
+            resultContainer.classList.add('hidden');
+            loader.classList.remove('hidden');
+            calculateBtn.disabled = true;
+
+            // --- Configuración de la API (Volvemos a la primera, 'ajith') ---
+            const url = `https://love-calculator.p.rapidapi.com/getPercentage?FirstName=${encodeURIComponent(name1)}&SecondName=${encodeURIComponent(name2)}`;
+            const options = {
+                method: 'GET',
+                headers: {
+                    'x-rapidapi-key': apiKey,
+                    'x-rapidapi-host': 'love-calculator.p.rapidapi.com'
+                }
+            };
+
+            // --- Llamada a la API ---
+            try {
+                // Usamos la función fetchWithRetry para más robustez
+                const data = await fetchWithRetry(url, options);
+                
+                // --- Mostrar resultados ---
+                displayResults(data); 
+
+            } catch (error) {
+                console.error('Error al llamar a la API:', error);
+                // Mensaje de error actualizado para sugerir la extensión CORS
+                showError(`Error: ${error.message}. ¿Usaste "Live Server" Y la extensión "Allow CORS"?`);
+            } finally {
+                // --- Limpiar UI (Fin de carga) ---
+                loader.classList.add('hidden');
+                calculateBtn.disabled = false;
+            }
+        }
+        
+        /**
+         * Muestra los resultados en el contenedor.
+         */
+        function displayResults(data) {
+            // Limpiar resultados anteriores
+            resultContainer.innerHTML = '';
+
+            // Crear y añadir el porcentaje
+            const percentageElement = document.createElement('h2');
+            percentageElement.className = 'text-6xl font-black text-pink-400 mb-2';
+            percentageElement.textContent = `${data.percentage}%`; // 'percentage' de la API
+            
+            // Crear y añadir el mensaje de resultado
+            const resultElement = document.createElement('p');
+            resultElement.className = 'text-xl text-gray-300';
+            resultElement.textContent = data.result; // 'result' de la API
+
+            resultContainer.appendChild(percentageElement);
+            resultContainer.appendChild(resultElement);
+            resultContainer.classList.remove('hidden');
+        }
+
+        /**
+         * Muestra un mensaje de error.
+         */
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.classList.remove('hidden');
+        }
+
+        /**
+         * Oculta el mensaje de error.
+         */
+        function hideError() {
+            errorMessage.classList.add('hidden');
+        }
+
+        /**
+         * Función fetch con reintentos
+         */
+        async function fetchWithRetry(url, options, retries = 3, delay = 1000, attempt = 1) {
+            try {
+                const response = await fetch(url, options);
+
+                if (!response.ok) {
+                    // Si la respuesta no es OK, manejar como error
+                    throw new Error(`Error de red: ${response.statusText} (código: ${response.status})`);
+                }
+
+                const data = await response.json();
+                
+                // Si la API devuelve un error en el JSON (algunas lo hacen)
+                if (data.error || data.message) {
+                    throw new Error(data.error || data.message);
+                }
+                
+                return data;
+
+            } catch (error) {
+                if (attempt < retries) {
+                    // Esperar antes de reintentar
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    // Reintentar (sin reintentos para 403 o 401)
+                    if (error.message.includes('403') || error.message.includes('401')) {
+                         throw error; // No reintentar en errores de autorización
+                    }
+                    return fetchWithRetry(url, options, retries, delay * 2, attempt + 1);
+                } else {
+                    // Se acabaron los reintentos
+                    throw error;
+                }
+            }
+        }
+
+    </script>
+</body>
+</html>

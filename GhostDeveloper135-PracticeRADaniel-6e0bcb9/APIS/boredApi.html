@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>¿Estás Aburrido?</title>
+    <!-- Carga de Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Carga de la fuente Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #22d3ee; 
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen flex items-center justify-center p-4">
+
+    <div class="bg-gray-800 p-8 rounded-2xl shadow-2xl w-full max-w-md">
+        
+        <h1 class="text-3xl font-bold text-center text-cyan-400 mb-2">Generador de Actividades</h1>
+        <p class="text-gray-400 text-center mb-6">¿Aburrido? Haz clic para obtener una sugerencia.</p>
+
+        <div class="space-y-4">
+            <button id="calculateBtn" class="w-full p-3 bg-cyan-600 text-white font-bold rounded-lg hover:bg-cyan-700 transition-colors duration-300 shadow-lg">
+                ¡Sugerir Actividad!
+            </button>
+        </div>
+
+        <div id="loader" class="loader mx-auto my-8 hidden"></div>
+
+        <div id="result-container" class="text-center mt-8 p-6 bg-gray-700 rounded-lg hidden">
+            <!-- El contenido del resultado se insertará aquí -->
+        </div>
+
+        <!-- Mensaje de Error (ahora mostrará el error real) -->
+        <div id="error-message" class="text-red-400 text-center mt-4 hidden"></div>
+
+    </div>
+
+    <script>
+        // --- Referencias a elementos del DOM ---
+        const calculateBtn = document.getElementById('calculateBtn');
+        const resultContainer = document.getElementById('result-container');
+        const loader = document.getElementById('loader');
+        const errorMessage = document.getElementById('error-message');
+
+        // --- Event Listener para el botón ---
+        calculateBtn.addEventListener('click', getActivity);
+
+        /**
+         * Función principal para obtener una actividad.
+         * Lógica de fetch simplificada y mensaje de error corregido.
+         */
+        async function getActivity() {
+            // --- Actualizar UI (Estado de carga) ---
+            hideError();
+            resultContainer.classList.add('hidden');
+            loader.classList.remove('hidden');
+            calculateBtn.disabled = true;
+
+            // --- Configuración de la API (Bored API) ---
+            // -----
+            // ¡CORRECCIÓN! Se cambió https:// a http://
+            // para evitar el error "Failed to fetch" (Mixed Content)
+            // al llamarlo desde Live Server (http://127.0.0.1)
+            // -----
+            const url = 'http://www.boredapi.com/api/activity/';
+            const options = {
+                method: 'GET',
+            };
+
+            // --- Llamada a la API ---
+            try {
+                const response = await fetch(url, options);
+
+                // Si la respuesta no es OK, lanza el error de HTTP
+                if (!response.ok) {
+                    throw new Error(`Error de red: ${response.status} (${response.statusText})`);
+                }
+
+                const data = await response.json();
+                
+                // Si la API devuelve su propio error (ej: { "error": "..." })
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                // --- Mostrar resultados ---
+                displayResults(data); 
+
+            } catch (error) {
+                console.error('Error al llamar a la API:', error);
+                // ¡Mensaje de error corregido!
+                // Ahora mostrará el error real (ej: "Error de red: 500" o "Failed to fetch")
+                showError(`Error al contactar la API: ${error.message}`);
+            } finally {
+                // --- Limpiar UI (Fin de carga) ---
+                loader.classList.add('hidden');
+                calculateBtn.disabled = false;
+            }
+        }
+        
+        /**
+         * Muestra los resultados en el contenedor.
+         */
+        function displayResults(data) {
+            resultContainer.innerHTML = ''; // Limpiar resultados anteriores
+
+            const activityElement = document.createElement('h2');
+            activityElement.className = 'text-2xl font-bold text-cyan-400 mb-3';
+            activityElement.textContent = data.activity;
+            
+            const typeElement = document.createElement('p');
+            typeElement.className = 'text-lg text-gray-300 capitalize';
+            typeElement.textContent = `Tipo: ${data.type}`; 
+
+            resultContainer.appendChild(activityElement);
+            resultContainer.appendChild(typeElement);
+            resultContainer.classList.remove('hidden');
+        }
+
+        /**
+         * Muestra un mensaje de error.
+         */
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.classList.remove('hidden');
+        }
+
+        /**
+         * Oculta el mensaje de error.
+         */
+        function hideError() {
+            errorMessage.classList.add('hidden');
+        }
+
+    </script>
+</body>
+</html>

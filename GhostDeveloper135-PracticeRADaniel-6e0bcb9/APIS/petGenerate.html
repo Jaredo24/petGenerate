@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generador de Perritos y Gatitos (UTTN)</title>
+    
+    <!-- Script de Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Fuentes de Google (Inter) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        /* Estilos del Loader (Indicador de carga) */
+        .loader {
+            border: 4px solid #f3f3f3; /* Gris claro */
+            border-top: 4px solid #f97316; /* Naranja (Perros) */
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        
+        /* Estilo complementario para el loader de gatos */
+        .loader-cat {
+            border-top-color: #a78bfa; /* Morado (Gatos) */
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Contenedor de la imagen (para mantener el espacio) */
+        .image-container {
+            min-height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #1f2937; /* gray-800 */
+            border-radius: 0.5rem; /* rounded-lg */
+            padding: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        /* Estilos de la imagen */
+        .animal-image {
+            width: 100%;
+            height: 250px; /* Altura fija para consistencia */
+            object-fit: cover; /* Para que la imagen llene el contenedor sin distorsionarse */
+            border-radius: 0.5rem; /* rounded-lg */
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-200 min-h-screen flex items-center justify-center p-4">
+
+    <div class="bg-gray-800 p-8 rounded-2xl shadow-2xl w-full max-w-2xl border-t-4 border-emerald-500">
+        
+     <div class="flex justify-center mb-6">
+            
+            <img 
+                src="https://www.uttn.edu.mx/wp-content/uploads/2017/06/logo-UT-Tamaulipas-Norte.png" 
+                alt="Logo UTTN (Placeholder)" 
+                class="h-16"
+            >
+        </div>
+        
+        <h1 class="text-3xl font-bold text-center text-emerald-400 mb-2">¡Generador de Mascotas!</h1>
+        <p class="text-gray-400 text-center mb-8">Elige ver un perrito, un gatito o ambos.</p>
+
+        <!-- Sección de Botones -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <button id="getDogBtn" class="w-full p-3 bg-orange-600 text-white font-bold rounded-lg hover:bg-orange-700 transition-colors duration-300 shadow-lg focus:outline-none focus:ring-2 focus:ring-orange-400">
+                Generar Perrito
+            </button>
+            <button id="getCatBtn" class="w-full p-3 bg-purple-600 text-white font-bold rounded-lg hover:bg-purple-700 transition-colors duration-300 shadow-lg focus:outline-none focus:ring-2 focus:ring-purple-400">
+                Generar Gatito
+            </button>
+            <button id="getBothBtn" class="w-full p-3 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700 transition-colors duration-300 shadow-lg focus:outline-none focus:ring-2 focus:ring-emerald-400">
+                Generar Ambos
+            </button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
+            <div id="dog-result-container" class="image-container bg-gray-700 hidden">
+                <div id="dog-loader" class="loader hidden"></div>
+                <img id="dogImage" src="" alt="Imagen de Perrito" class="animal-image hidden">
+            </div>
+            <div id="cat-result-container" class="image-container bg-gray-700 hidden">
+                <div id="cat-loader" class="loader loader-cat hidden"></div>
+                <img id="catImage" src="" alt="Imagen de Gatito" class="animal-image hidden">
+            </div>
+        </div>
+
+        <div id="error-message" class="text-red-400 text-center mt-6 hidden"></div>
+
+    </div>
+
+    <script>
+        const getDogBtn = document.getElementById('getDogBtn');
+        const getCatBtn = document.getElementById('getCatBtn');
+        const getBothBtn = document.getElementById('getBothBtn');
+
+        const dogResultContainer = document.getElementById('dog-result-container');
+        const dogLoader = document.getElementById('dog-loader');
+        const dogImage = document.getElementById('dogImage');
+
+        const catResultContainer = document.getElementById('cat-result-container');
+        const catLoader = document.getElementById('cat-loader');
+        const catImage = document.getElementById('catImage');
+
+        const errorMessage = document.getElementById('error-message');
+
+        const DOG_API_URL = 'https://dog.ceo/api/breeds/image/random';
+        const CAT_API_URL = 'https://api.thecatapi.com/v1/images/search';
+
+        getDogBtn.addEventListener('click', () => getAnimalImage('dog'));
+        getCatBtn.addEventListener('click', () => getAnimalImage('cat'));
+        getBothBtn.addEventListener('click', () => getAnimalImage('both'));
+
+        
+        async function getAnimalImage(animalType) {
+            hideError();
+            disableAllButtons(true);
+
+            if (animalType === 'dog' || animalType === 'both') {
+                dogResultContainer.classList.remove('hidden');
+                dogImage.classList.add('hidden');
+                dogLoader.classList.remove('hidden');
+            }
+            if (animalType === 'cat' || animalType === 'both') {
+                catResultContainer.classList.remove('hidden');
+                catImage.classList.add('hidden');
+                catLoader.classList.remove('hidden');
+            }
+            
+            if (animalType === 'cat') {
+                 dogResultContainer.classList.add('hidden');
+            }
+            if (animalType === 'dog') {
+                 catResultContainer.classList.add('hidden');
+            }
+
+            const dogPromise = (animalType === 'dog' || animalType === 'both') ? fetchDogImage() : Promise.resolve();
+            const catPromise = (animalType === 'cat' || animalType === 'both') ? fetchCatImage() : Promise.resolve();
+
+            await Promise.allSettled([dogPromise, catPromise]);
+            
+            disableAllButtons(false);
+        }
+
+        
+        async function fetchDogImage() {
+            try {
+                const response = await fetch(DOG_API_URL);
+                if (!response.ok) {
+                    throw new Error(`Error de red: ${response.status}`);
+                }
+                const data = await response.json();
+                
+                if (data.status && data.status === 'success') {
+                    displayDogImage(data.message);
+                } else {
+                    throw new Error(data.message || 'Error desconocido de la API de perros.');
+                }
+            } catch (error) {
+                console.error('Error al obtener imagen de perro:', error);
+                showError(`Error (Perro): ${error.message}`);
+                dogLoader.classList.add('hidden');
+            }
+        }
+
+        
+        async function fetchCatImage() {
+            try {
+                const response = await fetch(CAT_API_URL);
+                if (!response.ok) {
+                    throw new Error(`Error de red: ${response.status}`);
+                }
+                const data = await response.json();
+                
+                if (data.length > 0 && data[0].url) {
+                    displayCatImage(data[0].url);
+                } else {
+                    throw new Error('No se encontró imagen de gato.');
+                }
+            } catch (error) {
+                console.error('Error al obtener imagen de gato:', error);
+                showError(`Error (Gato): ${error.message}`);
+                catLoader.classList.add('hidden');
+            }
+        }
+        
+        
+        function displayDogImage(imageUrl) {
+            dogImage.src = imageUrl;
+            dogImage.alt = "Imagen de Perrito";
+            dogLoader.classList.add('hidden');
+            dogImage.classList.remove('hidden');
+            dogResultContainer.classList.remove('hidden');
+        }
+
+        
+        function displayCatImage(imageUrl) {
+            catImage.src = imageUrl;
+            catImage.alt = "Imagen de Gatito";
+            catLoader.classList.add('hidden');
+            catImage.classList.remove('hidden');
+            catResultContainer.classList.remove('hidden');
+        }
+
+        
+        function disableAllButtons(disabled) {
+            getDogBtn.disabled = disabled;
+            getCatBtn.disabled = disabled;
+            getBothBtn.disabled = disabled;
+        }
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.classList.remove('hidden');
+        }
+
+        
+        function hideError() {
+            errorMessage.classList.add('hidden');
+        }
+
+    </script>
+</body>
+</html>

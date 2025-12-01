@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Predictor de Edad</title> <!-- Título cambiado -->
+    <!-- Carga de Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Carga de la fuente Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        /* Estilo para la fuente Inter */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Estilo para el indicador de carga (spinner) */
+        .loader {
+            border: 4px solid #f3f3f3; /* gris claro */
+            /* Color de acento cambiado a azul */
+            border-top: 4px solid #3b82f6; 
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen flex items-center justify-center p-4">
+
+    <div class="bg-gray-800 p-8 rounded-2xl shadow-2xl w-full max-w-md">
+        
+        <!-- Título -->
+        <h1 class="text-3xl font-bold text-center text-blue-400 mb-2">Predictor de Edad</h1>
+        <p class="text-gray-400 text-center mb-6">Ingresa un nombre para ver su edad promedio.</p>
+
+        <!-- Formulario de Entradas -->
+        <div class="space-y-4">
+            <div>
+                <label for="name1" class="block text-sm font-medium text-gray-300 mb-1">Nombre</label>
+                <input type="text" id="name1" placeholder="Ej: Ana" class="w-full p-3 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+            </div>
+            <!-- El segundo campo de nombre ha sido ocultado -->
+            <div class="hidden">
+                <label for="name2" class="block text-sm font-medium text-gray-300 mb-1">Nombre de tu Pareja</LabeL>
+                <input type="text" id="name2" class="w-full p-3 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-pink-500 transition">
+            </div>
+            
+            <!-- Botón de Calcular -->
+            <button id="calculateBtn" class="w-full p-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-colors duration-300 shadow-lg">
+                Predecir Edad
+            </button>
+        </div>
+
+        <!-- Indicador de Carga -->
+        <div id="loader" class="loader mx-auto my-8 hidden"></div>
+
+        <!-- Área de Resultados -->
+        <div id="result-container" class="text-center mt-8 p-6 bg-gray-700 rounded-lg hidden">
+            <!-- El contenido del resultado se insertará aquí -->
+        </div>
+
+        <!-- Mensaje de Error -->
+        <div id="error-message" class="text-red-400 text-center mt-4 hidden"></div>
+
+    </div>
+
+    <script>
+        // --- Referencias a elementos del DOM ---
+        const name1Input = document.getElementById('name1');
+        // const name2Input = document.getElementById('name2'); // Ya no es necesario
+        const calculateBtn = document.getElementById('calculateBtn');
+        const resultContainer = document.getElementById('result-container');
+        const loader = document.getElementById('loader');
+        const errorMessage = document.getElementById('error-message');
+
+        // --- ¡YA NO NECESITAMOS API KEY! ---
+        // const apiKey = '...'; 
+        // ------------------------------------
+
+        // --- Event Listener para el botón ---
+        calculateBtn.addEventListener('click', predictAge); // Nombre de función cambiado
+
+        /**
+         * Función principal para predecir la edad.
+         */
+        async function predictAge() {
+            const name1 = name1Input.value.trim();
+
+            // --- Validación ---
+            if (!name1) {
+                showError('Por favor, ingresa un nombre.');
+                return;
+            }
+
+            // --- Actualizar UI (Estado de carga) ---
+            hideError();
+            resultContainer.classList.add('hidden');
+            loader.classList.remove('hidden');
+            calculateBtn.disabled = true;
+
+            // --- Configuración de la API (Agify.io) ---
+            // ¡Es una URL simple y no requiere clave!
+            const url = `https://api.agify.io?name=${encodeURIComponent(name1)}`;
+            const options = {
+                method: 'GET',
+                // No necesitamos 'headers' con clave de API
+            };
+
+            // --- Llamada a la API ---
+            try {
+                // Usamos la función fetchWithRetry (aún es útil para errores de red)
+                const data = await fetchWithRetry(url, options);
+                
+                // --- Mostrar resultados ---
+                displayResults(data); 
+
+            } catch (error) {
+                console.error('Error al llamar a la API:', error);
+                showError(`Error: ${error.message}. ¿Ejecutaste con "Live Server"?`);
+            } finally {
+                // --- Limpiar UI (Fin de carga) ---
+                loader.classList.add('hidden');
+                calculateBtn.disabled = false;
+            }
+        }
+        
+        /**
+         * Muestra los resultados en el contenedor.
+         * CAMBIO: Adaptado para la respuesta de Agify.io (data.age, data.name, data.count)
+         */
+        function displayResults(data) {
+            // Limpiar resultados anteriores
+            resultContainer.innerHTML = '';
+
+            // Si la API no devuelve edad (nombre no encontrado)
+            if (data.age === null) {
+                showError(`No se encontraron datos de edad para "${data.name}".`);
+                return;
+            }
+
+            // Crear y añadir la edad
+            const ageElement = document.createElement('h2');
+            ageElement.className = 'text-6xl font-black text-blue-400 mb-2';
+            ageElement.textContent = `${data.age} años`;
+            
+            // Crear y añadir el mensaje de contexto
+            const resultElement = document.createElement('p');
+            resultElement.className = 'text-lg text-gray-300';
+            // Formatear el número de 'count' con comas
+            const countFormatted = data.count.toLocaleString('es');
+            resultElement.textContent = `Edad promedio basada en ${countFormatted} personas con el nombre "${data.name}".`;
+
+            resultContainer.appendChild(ageElement);
+            resultContainer.appendChild(resultElement);
+            resultContainer.classList.remove('hidden');
+        }
+
+        /**
+         * Muestra un mensaje de error.
+         */
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.classList.remove('hidden');
+        }
+
+        /**
+         * Oculta el mensaje de error.
+         */
+        function hideError() {
+            errorMessage.classList.add('hidden');
+        }
+
+        /**
+         * Función fetch con reintentos
+         */
+        async function fetchWithRetry(url, options, retries = 3, delay = 1000, attempt = 1) {
+            try {
+                const response = await fetch(url, options);
+
+                if (!response.ok) {
+                    // Si la respuesta no es OK, manejar como error
+                    throw new Error(`Error de red: ${response.statusText} (código: ${response.status})`);
+                }
+
+                const data = await response.json();
+                
+                // Si la API devuelve un error en el JSON (algunas lo hacen)
+                if (data.error || data.message) {
+                    throw new Error(data.error || data.message);
+                }
+                
+                return data;
+
+            } catch (error) {
+                if (attempt < retries) {
+                    // Esperar antes de reintentar
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    // Reintentar (sin reintentos para 403 o 401)
+                    if (error.message.includes('403') || error.message.includes('401')) {
+                         throw error; // No reintentar en errores de autorización
+                    }
+                    return fetchWithRetry(url, options, retries, delay * 2, attempt + 1);
+                } else {
+                    // Se acabaron los reintentos
+                    throw error;
+                }
+            }
+        }
+
+    </script>
+</body>
+</html>
